@@ -56,7 +56,7 @@ def style_base_layout():
                 font-family:'Outfit',sans-serif;
                 }
 
-                button{
+                button[kind="primary"]{
                     border-radius:1.5rem !important;
                     background:#5865F2 !important;
                     color:white !important;
