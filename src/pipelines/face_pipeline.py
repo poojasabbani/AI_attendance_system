@@ -56,12 +56,14 @@ def get_trained_model():
         pass
     return {'clf':clf,'X':X,'Y':Y}
 
+
+    #upon getting a new student registration
     def train_classifier():
         st.cache_resource.clear()
         model_data=get_trained_model()
         return bool(model_data)
     
-    
+
     def predict_attendance(class_image_np):
         encodings=get_face_embeddings(class_image_np)
 
