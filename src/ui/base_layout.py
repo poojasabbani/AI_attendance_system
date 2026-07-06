@@ -33,9 +33,9 @@ def style_base_layout():
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Climate+Crisis:YEAR@1979&family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
-                #MainMenu,footer,header{
-                    visibility:hidden
-                }
+                # #MainMenu,footer,header{
+                #     visibility:hidden
+                # }
                 .block-container{
                     padding:1.5rem !important;}
                 h1{
@@ -58,7 +58,7 @@ def style_base_layout():
 
                 button[kind="primary"]{
                     border-radius:1.5rem !important;
-                    background:#5865F2 !important;
+                    background-color:#5865F2 !important;
                     color:white !important;
                     padding:10px 20px !important;
                     border:none !important;
@@ -69,7 +69,7 @@ def style_base_layout():
                     }
                 button[kind="secondary"]{
                     border-radius:1.5rem !important;
-                    background:#EB459E !important;
+                    background-color:#EB459E !important;
                     color:white !important;
                     padding:10px 20px !important;
                     border:none !important;
@@ -79,7 +79,7 @@ def style_base_layout():
                     }
                 button[kind="tertiary"]{
                     border-radius:1.5rem !important;
-                    background:#0A0A0A !important;
+                    background-color:#0A0A0A !important;
                     color:white !important;
                     padding:10px 20px !important;
                     border:none !important;
