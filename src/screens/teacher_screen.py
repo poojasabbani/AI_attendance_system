@@ -6,6 +6,16 @@ from src.database.db import create_teacher,check_teacher_exists,teacher_login,ge
 from src.components.dialog_create_subject import create_subject_dialog
 from src.components.share_subject_dialog import share_subject_dialog
 from src.components.subject_card import subject_card
+from src.components.dialog_add_photo import add_photos_dialog
+from src.pipelines.face_pipeline import predict_attendance
+from src.components.dialog_attendance_result import attendance_result_dialog
+import pandas as pd 
+
+from src.database.config import supabase
+from datetime import datetime
+import numpy as np
+
+
 def teacher_screen():
     style_background_dashboard()
     style_base_layout()
@@ -55,9 +65,95 @@ def teacher_dashboard():
     st.divider()
     
     def teacher_tab_take_attendance():
-        st.header("take attendance")
+        teacher_id = st.session_state.teacher_data["teacher_id"]
+        st.header("Take AI Attendance")
         
+        if "attendance_images" not in st.session_state:
+            st.session_state["attendance_images"] = []
+            
+        subjects =  get_teacher_subjects(teacher_id)
         
+        if not subjects:
+            st.warning("You haven't created any subjects yet! Please create one to begin")
+            return
+        subject_options ={f"{s['name']}-{s['subject_code']}": s['subject_id'] for s in subjects}
+        
+        col1,col2 = st.columns([3,1])
+        
+        with col1:
+            selected_subject_label = st.selectbox('Select Subject',options=list(subject_options.keys()))
+        with col2:
+            if st.button("Add photos",type="primary",icon=":material/photo_prints:",width="stretch"):
+                add_photos_dialog()
+        selected_subject_id = subject_options[selected_subject_label]
+        
+        st.divider()
+        if st.session_state.attendance_images:
+            st.header("Added Photos")
+            
+            gallery_cols =st.columns(4)
+            
+            for idx,img in enumerate(st.session_state.attendance_images):
+                with gallery_cols[idx % 4]:
+                    st.image(img,width="stretch",caption = f"Photo{idx+1}")
+            c1,c2,c3 = st.columns(3)
+            has_photos = bool(st.session_state.attendance_images)
+            with c1:
+                if st.button("Clear All Photos",type="tertiary",width="stretch",icon=":material/delete:,disabled=not has_photos"):
+                    st.session_state.attendance_images = []
+                    st.rerun()
+            with c2:
+                if st.button("Run Face Analysis",type="tertiary",width="stretch",icon=":material/familiar_face_and_zone:",disabled=not has_photos):
+                    with st.spinner("Deep scanning class photos..."):
+                        all_detected_ids={}
+                        
+                        for idx,img in enumerate(st.session_state.attendance_images):
+                            img_np = np.array(img.convert('RGB'))
+                            
+                            detected,_,_ = predict_attendance(img_np)
+                            
+                            if detected:
+                                for sid in detected.keys():
+                                    try:
+                                        student_id = int(sid)
+                                    except (ValueError, TypeError):
+                                        continue
+                                    
+                                    all_detected_ids.setdefault(student_id,[]).append(f"Photo {idx+1}")
+                        enrolled_res = supabase.table("subject_students").select("*,students(*)").eq("subject_id",selected_subject_id).execute()
+                        enrolled_students = enrolled_res.data
+                        results,attendance_to_log = [],[]
+                        
+                        if not enrolled_students:
+                            st.warning("No students in this course")
+                        else:
+                            
+                            current_timestamp = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+                            
+                            for node in enrolled_students:
+                                student=node['students']
+                                sources = all_detected_ids.get(int(student['student_id']), [])
+                                is_present = len(sources)>0
+                                
+                                results.append({
+                                    'Name':student['name'],
+                                    "ID": student['student_id'],
+                                    "source":",".join(sources) if is_present else "-",
+                                    "Status":"✅Present" if is_present else "❌Absent"
+                                })
+                                
+                                attendance_to_log.append({
+                                    "student_id":student['student_id'],
+                                    "subject_id":selected_subject_id,
+                                    "timestamp":current_timestamp,
+                                    "is_present":bool(is_present)
+                                })
+                            attendance_result_dialog(pd.DataFrame(results),attendance_to_log)
+            with c3:
+                if st.button("Use Voice Attendance",type="primary",width="stretch",icon=":material/mic:"):
+                    voice_attendance_dialog()
+                        
+                        
     def teacher_tab_manage_subjects():
         teacher_id=st.session_state.teacher_data['teacher_id']
         
@@ -76,7 +172,7 @@ def teacher_dashboard():
                     ("🧑‍🏫","Classes",sub['total_classes'])
                 ]
                 def share_btn():
-                    if st.button(f"Share Code:{sub['name']}",key=f"share {sub["subject_code"]}",icon=":material/share:"):
+                    if st.button(f"Share Code:{sub['name']}",key=f"share {sub['subject_code']}",icon=":material/share:"):
                         share_subject_dialog(sub['name'],sub["subject_code"])
                         st.space()
                     
